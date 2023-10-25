@@ -15,10 +15,12 @@
  * =============================================================================
  */
 
-import {GPGPUProgram, useShapeUniforms} from './gpgpu_math';
-import {getChannels} from './packing_util';
-import {getCoordsDataType} from './shader_compiler';
+import { GPGPUProgram, useShapeUniforms } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
+import { getChannels } from './packing_util';
+import { getCoordsDataType } from './shader_compiler';
 
+@memoizedClass
 export class PackProgram implements GPGPUProgram {
   variableNames = ['A'];
   outputShape: number[];
@@ -29,9 +31,9 @@ export class PackProgram implements GPGPUProgram {
   rank: number;
 
   constructor(
-      outputShape:
-          number[]) {  // TODO(https://github.com/tensorflow/tfjs/issues/893):
-                       // Only input / output 3D tensors.
+    outputShape:
+      number[]) {  // TODO(https://github.com/tensorflow/tfjs/issues/893):
+    // Only input / output 3D tensors.
     this.outputShape = outputShape;
     this.rank = outputShape.length;
     this.enableShapeUniforms = useShapeUniforms(this.outputShape.length);
@@ -84,14 +86,12 @@ export class PackProgram implements GPGPUProgram {
 
   private getOutOfBoundsCondition(dims: string[]): string {
     if (this.rank === 1) {
-      return `rc > ${
-          this.enableShapeUniforms ? 'outShape' : this.outputShape[0]}`;
+      return `rc > ${this.enableShapeUniforms ? 'outShape' : this.outputShape[0]}`;
     }
 
     let cond = '';
     for (let i = this.rank - 2; i < this.rank; i++) {
-      cond += `${dims[i]} >= ${
-          this.enableShapeUniforms ? `outShape[${i}]` : this.outputShape[i]}`;
+      cond += `${dims[i]} >= ${this.enableShapeUniforms ? `outShape[${i}]` : this.outputShape[i]}`;
       if (i < this.rank - 1) {
         cond += '||';
       }
@@ -107,9 +107,9 @@ export class PackProgram implements GPGPUProgram {
 
     const innerDims = dims.slice(-2);
     const col = this.enableShapeUniforms ? `outShape[${this.rank} - 1]` :
-                                           this.outputShape[this.rank - 1];
+      this.outputShape[this.rank - 1];
     const row = this.enableShapeUniforms ? `outShape[${this.rank} - 2]` :
-                                           this.outputShape[this.rank - 2];
+      this.outputShape[this.rank - 2];
 
     return `
       int r = ${innerDims[0]};
@@ -126,7 +126,7 @@ export class PackProgram implements GPGPUProgram {
     const sourceCoords = this.getSourceCoordsArr(dims);
     if (this.rank === 1) {
       const outShape =
-          this.enableShapeUniforms ? 'outShape' : this.outputShape[0];
+        this.enableShapeUniforms ? 'outShape' : this.outputShape[0];
       return `getA(rc), (rc + 1 >= ${outShape} ? 0. : getA(rc + 1)), 0, 0`;
     }
 

@@ -15,18 +15,20 @@
  * =============================================================================
  */
 
-import {backend_util} from '@tensorflow/tfjs-core';
-import {GPGPUProgram} from './gpgpu_math';
+import { backend_util } from '@tensorflow/tfjs-core';
+import { GPGPUProgram } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
 
+@memoizedClass
 export class Pool2DProgram implements GPGPUProgram {
   variableNames = ['x'];
   outputShape: number[];
   userCode: string;
 
   constructor(
-      convInfo: backend_util.Conv2DInfo, poolType: 'max'|'avg',
-      computePositions: boolean, flattenPositions = false,
-      includeBatchInIndex = false) {
+    convInfo: backend_util.Conv2DInfo, poolType: 'max' | 'avg',
+    computePositions: boolean, flattenPositions = false,
+    includeBatchInIndex = false) {
     if (poolType === 'avg' && computePositions) {
       throw new Error('Cannot compute positions for average pool.');
     }
@@ -44,10 +46,9 @@ export class Pool2DProgram implements GPGPUProgram {
     this.outputShape = convInfo.outShape;
 
     const isAvgPool = poolType === 'avg';
-    const batchFlattenPositionStr = `((batch  * ${convInfo.inHeight} + xR) * ${
-        convInfo.inWidth} + xC) * ${convInfo.inChannels} + d`;
+    const batchFlattenPositionStr = `((batch  * ${convInfo.inHeight} + xR) * ${convInfo.inWidth} + xC) * ${convInfo.inChannels} + d`;
     const flattenPositionStr =
-        `(xR * ${convInfo.inWidth} + xC) * ${convInfo.inChannels} + d`;
+      `(xR * ${convInfo.inWidth} + xC) * ${convInfo.inChannels} + d`;
 
     let initializationValue = '0.0';
     if (!isAvgPool) {
@@ -103,10 +104,9 @@ export class Pool2DProgram implements GPGPUProgram {
               if (value ${compareOp} currMinMaxValue) {
                 minMaxValue = value;
                 minMaxValueFound = 1.0;
-                minMaxPosition = ${
-          flattenPositions ? (includeBatchInIndex ? batchFlattenPositionStr :
-                                                    flattenPositionStr) :
-                             `wR * ${effectiveFilterWidth} + wC`};
+                minMaxPosition = ${flattenPositions ? (includeBatchInIndex ? batchFlattenPositionStr :
+          flattenPositionStr) :
+          `wR * ${effectiveFilterWidth} + wC`};
               }
             }
           }
@@ -119,7 +119,7 @@ export class Pool2DProgram implements GPGPUProgram {
     const compareOp = 'max';
 
     let returnValue = `${poolType}(${poolType}(${poolType}(` +
-        'minMaxValue[0], minMaxValue[1]), minMaxValue[2]), minMaxValue[3])';
+      'minMaxValue[0], minMaxValue[1]), minMaxValue[2]), minMaxValue[3])';
     if (poolType === 'avg') {
       returnValue = `avgValue / max(count, 1.0)`;
     }
@@ -229,9 +229,9 @@ export class Pool3DProgram implements GPGPUProgram {
   userCode: string;
 
   constructor(
-      convInfo: backend_util.Conv3DInfo, poolType: 'max'|'avg',
-      computePositions: boolean, flattenPositions = false,
-      includeBatchInIndex = false) {
+    convInfo: backend_util.Conv3DInfo, poolType: 'max' | 'avg',
+    computePositions: boolean, flattenPositions = false,
+    includeBatchInIndex = false) {
     if (poolType === 'avg' && computePositions) {
       throw new Error('Cannot compute positions for average pool.');
     }
@@ -317,15 +317,11 @@ export class Pool3DProgram implements GPGPUProgram {
                 if (value ${compareOp} currMinMaxValue) {
                   minMaxValue = value;
                   minMaxValueFound = 1.0;
-                  minMaxPosition = ${
-          flattenPositions ?
-              (includeBatchInIndex ?
-                   `(((batch * ${convInfo.inDepth} + xD) * ${
-                       convInfo.inHeight} + xR) * ${convInfo.inWidth} + xC) * ${
-                       convInfo.inChannels} + ch` :
-                   `((xD * ${convInfo.inHeight} + xR) * ${
-                       convInfo.inWidth} + xC) * ${convInfo.inChannels} + ch`) :
-              `wD * ${effectiveFilterHeight} * ${effectiveFilterWidth} +
+                  minMaxPosition = ${flattenPositions ?
+          (includeBatchInIndex ?
+            `(((batch * ${convInfo.inDepth} + xD) * ${convInfo.inHeight} + xR) * ${convInfo.inWidth} + xC) * ${convInfo.inChannels} + ch` :
+            `((xD * ${convInfo.inHeight} + xR) * ${convInfo.inWidth} + xC) * ${convInfo.inChannels} + ch`) :
+          `wD * ${effectiveFilterHeight} * ${effectiveFilterWidth} +
                       wR * ${effectiveFilterWidth} + wC`};
                 }
               }
@@ -340,7 +336,7 @@ export class Pool3DProgram implements GPGPUProgram {
     const compareOp = 'max';
 
     let returnValue = `${poolType}(${poolType}(${poolType}(` +
-        'minMaxValue[0], minMaxValue[1]), minMaxValue[2]), minMaxValue[3])';
+      'minMaxValue[0], minMaxValue[1]), minMaxValue[2]), minMaxValue[3])';
     if (poolType === 'avg') {
       // Use `max(count, 1.0)` instead of `count` in case count === 0.0.
       // If count === 0.0, `avgValue` is always 0.0 and we change `count`'s

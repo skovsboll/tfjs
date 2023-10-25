@@ -15,23 +15,25 @@
  * =============================================================================
  */
 
-import {GPGPUProgram} from './gpgpu_math';
-import {getChannels} from './packing_util';
-import {getCoordsDataType, UniformType} from './shader_compiler';
+import { GPGPUProgram } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
+import { getChannels } from './packing_util';
+import { getCoordsDataType, UniformType } from './shader_compiler';
 
+@memoizedClass
 export class PadPackedProgram implements GPGPUProgram {
   variableNames = ['x'];
   packedInputs = true;
   packedOutput = true;
   outputShape: number[];
   userCode: string;
-  customUniforms = [{name: 'value', type: 'float' as UniformType}];
+  customUniforms = [{ name: 'value', type: 'float' as UniformType }];
 
   constructor(
-      xShape: number[], paddings: Array<[number, number]>,
-      constantValue: number) {
+    xShape: number[], paddings: Array<[number, number]>,
+    constantValue: number) {
     this.outputShape = paddings.map(
-        (p, i) => p[0] /* beforePad */ + xShape[i] + p[1] /* afterPad */);
+      (p, i) => p[0] /* beforePad */ + xShape[i] + p[1] /* afterPad */);
     const rank = xShape.length;
     const dtype = getCoordsDataType(rank);
 
@@ -41,7 +43,7 @@ export class PadPackedProgram implements GPGPUProgram {
     const source = getChannels('source', rank);
     const cLimit = `${coords[rank - 1]} < ${this.outputShape[rank - 1]}`;
     const innerDims =
-        rank === 1 ? 'source' : `vec2(${source.slice(-2).join()})`;
+      rank === 1 ? 'source' : `vec2(${source.slice(-2).join()})`;
 
     const componentSetup = [
       `${dtype} rc = outputLoc;`, `${coords[rank - 1]} += 1;
@@ -56,8 +58,8 @@ export class PadPackedProgram implements GPGPUProgram {
     ];
 
     const paddingArea = rank === 1 ?
-        'rc < start || rc >= end' :
-        'any(lessThan(rc, start)) || any(greaterThanEqual(rc, end))';
+      'rc < start || rc >= end' :
+      'any(lessThan(rc, start)) || any(greaterThanEqual(rc, end))';
     let mainLoop = '';
     for (let i = 0, j = rank === 1 ? 2 : 4; i < j; i++) {
       mainLoop += `

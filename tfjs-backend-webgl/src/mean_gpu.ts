@@ -15,16 +15,18 @@
  * =============================================================================
  */
 
-import {backend_util, util} from '@tensorflow/tfjs-core';
-import {GPGPUProgram} from './gpgpu_math';
+import { backend_util, util } from '@tensorflow/tfjs-core';
+import { GPGPUProgram } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
 
+@memoizedClass
 export class MeanProgram implements GPGPUProgram {
   variableNames = ['x'];
   outputShape: number[];
   userCode: string;
 
   constructor(reduceInfo: backend_util.ReduceInfo, divisor?: number) {
-    const {windowSize, batchSize, inSize, outSize} = reduceInfo;
+    const { windowSize, batchSize, inSize, outSize } = reduceInfo;
     this.outputShape = [batchSize, outSize];
 
     const windowSizeNearestVec4 = Math.floor(windowSize / 4) * 4;
@@ -33,9 +35,8 @@ export class MeanProgram implements GPGPUProgram {
     let updateSnippet = `sumValue += dot(values, ones);`;
     if (divisor != null) {
       const denominator = 1 / divisor;
-      updateSnippet = `sumValue += dot(values * ${
-          util.isInt(denominator) ? denominator.toPrecision(2) :
-                                    denominator}, ones);`;
+      updateSnippet = `sumValue += dot(values * ${util.isInt(denominator) ? denominator.toPrecision(2) :
+          denominator}, ones);`;
     }
 
     let checkOutOfBounds = '';

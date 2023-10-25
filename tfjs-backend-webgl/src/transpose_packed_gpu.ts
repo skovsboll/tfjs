@@ -15,10 +15,12 @@
  * =============================================================================
  */
 
-import {GPGPUProgram} from './gpgpu_math';
-import {getVecChannels} from './packing_util';
-import {getCoordsDataType} from './shader_compiler';
+import { GPGPUProgram } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
+import { getVecChannels } from './packing_util';
+import { getCoordsDataType } from './shader_compiler';
 
+@memoizedClass
 export class TransposePackedProgram implements GPGPUProgram {
   variableNames = ['A'];
   outputShape: number[];
@@ -36,7 +38,7 @@ export class TransposePackedProgram implements GPGPUProgram {
     this.rank = outputShape.length;
     if (this.rank > 6) {
       throw Error(
-          `Packed transpose for rank ${this.rank} is not yet supported.`);
+        `Packed transpose for rank ${this.rank} is not yet supported.`);
     }
     const dtype = getCoordsDataType(this.rank);
 
@@ -47,7 +49,7 @@ export class TransposePackedProgram implements GPGPUProgram {
     }
     const innerDims = `vec2(${switchedOrder.slice(-2).join()})`;
     const nextColumn =
-        `++${outputOrder[this.rank - 1]} < ${outputShape[this.rank - 1]}`;
+      `++${outputOrder[this.rank - 1]} < ${outputShape[this.rank - 1]}`;
     const getc = `getChannel(getA(${switchedOrder.join()}), ${innerDims})`;
 
     this.userCode = `

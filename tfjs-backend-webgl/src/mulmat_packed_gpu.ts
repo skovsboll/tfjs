@@ -15,8 +15,10 @@
  * =============================================================================
  */
 
-import {GPGPUProgram, useShapeUniforms} from './gpgpu_math';
+import { GPGPUProgram, useShapeUniforms } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
 
+@memoizedClass
 export class MatMulPackedProgram implements GPGPUProgram {
   variableNames = ['matrixA', 'matrixB'];
   packedInputs = true;
@@ -26,10 +28,10 @@ export class MatMulPackedProgram implements GPGPUProgram {
   enableShapeUniforms: boolean;
 
   constructor(
-      aShape: [number, number, number], bShape: [number, number, number],
-      outputShape: [number, number, number], transposeA = false,
-      transposeB = false, addBias = false, activation: string = null,
-      hasPreluActivation = false, hasLeakyreluActivation = false) {
+    aShape: [number, number, number], bShape: [number, number, number],
+    outputShape: [number, number, number], transposeA = false,
+    transposeB = false, addBias = false, activation: string = null,
+    hasPreluActivation = false, hasLeakyreluActivation = false) {
     this.outputShape = outputShape;
     this.enableShapeUniforms = useShapeUniforms(this.outputShape.length);
 

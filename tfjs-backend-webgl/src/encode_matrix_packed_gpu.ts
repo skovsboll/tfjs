@@ -15,8 +15,9 @@
  * =============================================================================
  */
 
-import {getGlslDifferences} from './glsl_version';
-import {GPGPUProgram, useShapeUniforms} from './gpgpu_math';
+import { getGlslDifferences } from './glsl_version';
+import { GPGPUProgram, useShapeUniforms } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
 import * as shader_util from './shader_compiler_util';
 
 /*
@@ -35,6 +36,7 @@ Single texels contain only values from the same batch, and from adjacent rows
 and columns.
  */
 
+@memoizedClass
 export class EncodeMatrixPackedProgram implements GPGPUProgram {
   variableNames = ['A'];
   userCode: string;
@@ -42,10 +44,10 @@ export class EncodeMatrixPackedProgram implements GPGPUProgram {
   packedInputs = false;
   packedOutput = true;
   enableShapeUniforms: boolean;
-  customUniforms = [{name: 'texShape', type: 'ivec2' as const }];
+  customUniforms = [{ name: 'texShape', type: 'ivec2' as const }];
 
   constructor(
-      outputShape: [number, number, number], inputIsUnsignedByte = false) {
+    outputShape: [number, number, number], inputIsUnsignedByte = false) {
     const glsl = getGlslDifferences();
     this.outputShape = outputShape;
     this.enableShapeUniforms = useShapeUniforms(this.outputShape.length);
@@ -62,11 +64,9 @@ export class EncodeMatrixPackedProgram implements GPGPUProgram {
 
         mainLoop += `
           localCoords = coords;
-          if(localCoords[2] + ${col} < ${
-            this.enableShapeUniforms ? 'outShape[2]' : `${outputShape[2]}`}) {
+          if(localCoords[2] + ${col} < ${this.enableShapeUniforms ? 'outShape[2]' : `${outputShape[2]}`}) {
           localCoords[2] += ${col};
-          if (localCoords[1] + ${row} < ${
-            this.enableShapeUniforms ? 'outShape[1]' : `${outputShape[1]}`}) {
+          if (localCoords[1] + ${row} < ${this.enableShapeUniforms ? 'outShape[1]' : `${outputShape[1]}`}) {
             localCoords[1] += ${row};
 
             flatIndex = getFlatIndex(localCoords);
@@ -95,9 +95,8 @@ export class EncodeMatrixPackedProgram implements GPGPUProgram {
     }
 
     this.userCode = `
-        ${
-        this.enableShapeUniforms ? shader_util.getFlatIndexFrom3DOutput() :
-                                   shader_util.getFlatIndexFrom3D(outputShape)}
+        ${this.enableShapeUniforms ? shader_util.getFlatIndexFrom3DOutput() :
+        shader_util.getFlatIndexFrom3D(outputShape)}
 
         void main() {
           ivec3 coords = getOutputCoords();

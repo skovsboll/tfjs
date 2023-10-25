@@ -15,18 +15,18 @@
  * =============================================================================
  */
 
-import {dispose, InferenceModel, io, ModelPredictConfig, NamedTensorMap, Tensor, util} from '@tensorflow/tfjs-core';
+import { dispose, InferenceModel, io, ModelPredictConfig, NamedTensorMap, Tensor, util } from '@tensorflow/tfjs-core';
 
 import * as tensorflow from '../data/compiled_api';
-import {NamedTensorsMap, TensorInfo} from '../data/types';
-import {OperationMapper} from '../operations/operation_mapper';
+import { NamedTensorsMap, TensorInfo } from '../data/types';
+import { OperationMapper } from '../operations/operation_mapper';
 
-import {GraphExecutor} from './graph_executor';
-import {ResourceManager} from './resource_manager';
+import { GraphExecutor } from './graph_executor';
+import { ResourceManager } from './resource_manager';
 
 export const TFHUB_SEARCH_PARAM = '?tfjs-format=file';
 export const DEFAULT_MODEL_NAME = 'model.json';
-type Url = string|io.IOHandler|io.IOHandlerSync;
+type Url = string | io.IOHandler | io.IOHandlerSync;
 type UrlIOHandler<T extends Url> = T extends string ? io.IOHandler : T;
 
 /**
@@ -40,13 +40,13 @@ type UrlIOHandler<T extends Url> = T extends string ? io.IOHandler : T;
  * @doc {heading: 'Models', subheading: 'Classes'}
  */
 export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
-    InferenceModel {
+  InferenceModel {
   private executor: GraphExecutor;
   private version = 'n/a';
   private handler: UrlIOHandler<ModelURL>;
   private artifacts: io.ModelArtifacts;
   private initializer: GraphExecutor;
-  private resourceIdToCapturedInput: {[key: number]: Tensor};
+  private resourceIdToCapturedInput: { [key: number]: Tensor };
   private resourceManager: ResourceManager;
   private signature: tensorflow.ISignatureDef;
   private initializerSignature: tensorflow.ISignatureDef;
@@ -100,8 +100,8 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
    * before the load is completed.
    */
   constructor(
-      private modelUrl: ModelURL, private loadOptions: io.LoadOptions = {},
-      tfio = io) {
+    private modelUrl: ModelURL, private loadOptions: io.LoadOptions = {},
+    tfio = io) {
     this.io = tfio;
     if (loadOptions == null) {
       this.loadOptions = {};
@@ -117,19 +117,19 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
       this.handler = path as IOHandler;
     } else if (this.loadOptions.requestInit != null) {
       this.handler = this.io.browserHTTPRequest(
-                         path as string, this.loadOptions) as IOHandler;
+        path as string, this.loadOptions) as IOHandler;
     } else {
       const handlers =
-          this.io.getLoadHandlers(path as string, this.loadOptions);
+        this.io.getLoadHandlers(path as string, this.loadOptions);
       if (handlers.length === 0) {
         // For backward compatibility: if no load handler can be found,
         // assume it is a relative http path.
         handlers.push(
-            this.io.browserHTTPRequest(path as string, this.loadOptions));
+          this.io.browserHTTPRequest(path as string, this.loadOptions));
       } else if (handlers.length > 1) {
         throw new Error(
-            `Found more than one (${handlers.length}) load handlers for ` +
-            `URL '${[path]}'`);
+          `Found more than one (${handlers.length}) load handlers for ` +
+          `URL '${[path]}'`);
       }
       this.handler = handlers[0] as IOHandler;
     }
@@ -139,18 +139,18 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
    * Loads the model and weight files, construct the in memory weight map and
    * compile the inference graph.
    */
-  load(): UrlIOHandler<ModelURL> extends io.IOHandlerSync? boolean:
-                                             Promise<boolean> {
+  load(): UrlIOHandler<ModelURL> extends io.IOHandlerSync ? boolean :
+    Promise<boolean> {
     type IOHandler = UrlIOHandler<ModelURL>;
     this.findIOHandler();
     if (this.handler.load == null) {
       throw new Error(
-          'Cannot proceed with model loading because the IOHandler provided ' +
-          'does not have the `load` method implemented.');
+        'Cannot proceed with model loading because the IOHandler provided ' +
+        'does not have the `load` method implemented.');
     }
 
     type Result =
-        IOHandler extends io.IOHandlerSync ? boolean : Promise<boolean>;
+      IOHandler extends io.IOHandlerSync ? boolean : Promise<boolean>;
 
     const loadResult = this.handler.load() as ReturnType<IOHandler['load']>;
     if (util.isPromise(loadResult)) {
@@ -185,18 +185,18 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
 
     this.version = `${graph.versions.producer}.${graph.versions.minConsumer}`;
     const weightMap = this.io.decodeWeights(
-        this.artifacts.weightData, this.artifacts.weightSpecs);
+      this.artifacts.weightData, this.artifacts.weightSpecs);
     this.executor = new GraphExecutor(
-        OperationMapper.Instance.transformGraph(graph, this.signature));
+      OperationMapper.Instance.transformGraph(graph, this.signature));
     this.executor.weightMap = this.convertTensorMapToTensorsMap(weightMap);
     // Attach a model-level resourceManager to each executor to share resources,
     // such as `HashTable`.
     this.executor.resourceManager = this.resourceManager;
 
     if (artifacts.modelInitializer != null &&
-        (artifacts.modelInitializer as tensorflow.IGraphDef).node != null) {
+      (artifacts.modelInitializer as tensorflow.IGraphDef).node != null) {
       const initializer =
-          OperationMapper.Instance.transformGraph(artifacts.modelInitializer);
+        OperationMapper.Instance.transformGraph(artifacts.modelInitializer);
       this.initializer = new GraphExecutor(initializer);
       this.initializer.weightMap = this.executor.weightMap;
       // Attach a model-level resourceManager to the initializer, the
@@ -253,38 +253,38 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
    *
    * @doc {heading: 'Models', subheading: 'Classes', ignoreCI: true}
    */
-  async save(handlerOrURL: io.IOHandler|string, config?: io.SaveConfig):
-      Promise<io.SaveResult> {
+  async save(handlerOrURL: io.IOHandler | string, config?: io.SaveConfig):
+    Promise<io.SaveResult> {
     if (typeof handlerOrURL === 'string') {
       const handlers = this.io.getSaveHandlers(handlerOrURL);
       if (handlers.length === 0) {
         throw new Error(
-            `Cannot find any save handlers for URL '${handlerOrURL}'`);
+          `Cannot find any save handlers for URL '${handlerOrURL}'`);
       } else if (handlers.length > 1) {
         throw new Error(
-            `Found more than one (${handlers.length}) save handlers for ` +
-            `URL '${handlerOrURL}'`);
+          `Found more than one (${handlers.length}) save handlers for ` +
+          `URL '${handlerOrURL}'`);
       }
       handlerOrURL = handlers[0];
     }
     if (handlerOrURL.save == null) {
       throw new Error(
-          'GraphModel.save() cannot proceed because the IOHandler ' +
-          'provided does not have the `save` attribute defined.');
+        'GraphModel.save() cannot proceed because the IOHandler ' +
+        'provided does not have the `save` attribute defined.');
     }
 
     return handlerOrURL.save(this.artifacts);
   }
 
-  private addStructuredOutputNames(outputTensors: Tensor|Tensor[]) {
+  private addStructuredOutputNames(outputTensors: Tensor | Tensor[]) {
     if (this.structuredOutputKeys) {
       const outputTensorsArray =
-          outputTensors instanceof Tensor ? [outputTensors] : outputTensors;
+        outputTensors instanceof Tensor ? [outputTensors] : outputTensors;
       const outputTensorMap: NamedTensorMap = {};
 
       outputTensorsArray.forEach(
-          (outputTensor, i) => outputTensorMap[this.structuredOutputKeys[i]] =
-              outputTensor);
+        (outputTensor, i) => outputTensorMap[this.structuredOutputKeys[i]] =
+          outputTensor);
 
       return outputTensorMap;
     }
@@ -330,10 +330,14 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
    *
    * @doc {heading: 'Models', subheading: 'Classes'}
    */
-  predict(inputs: Tensor|Tensor[]|NamedTensorMap, config?: ModelPredictConfig):
-      Tensor|Tensor[]|NamedTensorMap {
+  predict(inputs: Tensor | Tensor[] | NamedTensorMap, config?: ModelPredictConfig):
+    Tensor | Tensor[] | NamedTensorMap {
+    // performance.mark("predict - start")
     const outputTensors = this.execute(inputs, this.outputNodes);
-    return this.addStructuredOutputNames(outputTensors);
+    const names = this.addStructuredOutputNames(outputTensors);
+    // performance.mark("predict - end")
+    // performance.measure("predict", "predict - start", "predict - end")
+    return names
   }
 
   /**
@@ -377,14 +381,14 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
    * @doc {heading: 'Models', subheading: 'Classes'}
    */
   async predictAsync(
-      inputs: Tensor|Tensor[]|NamedTensorMap,
-      config?: ModelPredictConfig): Promise<Tensor|Tensor[]|NamedTensorMap> {
+    inputs: Tensor | Tensor[] | NamedTensorMap,
+    config?: ModelPredictConfig): Promise<Tensor | Tensor[] | NamedTensorMap> {
     const outputTensors = await this.executeAsync(inputs, this.outputNodes);
     return this.addStructuredOutputNames(outputTensors);
   }
 
-  private normalizeInputs(inputs: Tensor|Tensor[]|
-                          NamedTensorMap): NamedTensorMap {
+  private normalizeInputs(inputs: Tensor | Tensor[] |
+    NamedTensorMap): NamedTensorMap {
     if (!(inputs instanceof Tensor) && !Array.isArray(inputs)) {
       // The input is already a NamedTensorMap.
       const signatureInputs = this.signature?.inputs;
@@ -401,12 +405,10 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
     inputs = Array.isArray(inputs) ? inputs : [inputs];
 
     const numCapturedInputs =
-        Object.keys(this.resourceIdToCapturedInput).length;
+      Object.keys(this.resourceIdToCapturedInput).length;
     if (inputs.length + numCapturedInputs !== this.inputNodes.length) {
-      throw new Error(`Input tensor count mismatch, the graph model has ${
-          this.inputNodes.length -
-          numCapturedInputs} non-resource placeholders, while there are ${
-          inputs.length} input tensors provided.`);
+      throw new Error(`Input tensor count mismatch, the graph model has ${this.inputNodes.length -
+        numCapturedInputs} non-resource placeholders, while there are ${inputs.length} input tensors provided.`);
     }
 
     let inputIndex = 0;
@@ -421,7 +423,7 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
     }, {} as NamedTensorMap);
   }
 
-  private normalizeOutputs(outputs: string|string[]): string[] {
+  private normalizeOutputs(outputs: string | string[]): string[] {
     outputs = outputs || this.outputNodes;
     return !Array.isArray(outputs) ? [outputs] : outputs;
   }
@@ -434,7 +436,7 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
       return this.initializer.execute({}, []);
     } else {
       return this.initializer.execute(
-          {}, Object.keys(this.initializerSignature.outputs));
+        {}, Object.keys(this.initializerSignature.outputs));
     }
   }
 
@@ -446,7 +448,7 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
       return this.initializer.executeAsync({}, []);
     } else {
       return this.initializer.executeAsync(
-          {}, Object.keys(this.initializerSignature.outputs));
+        {}, Object.keys(this.initializerSignature.outputs));
     }
   }
 
@@ -480,8 +482,8 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
    *
    * @doc {heading: 'Models', subheading: 'Classes'}
    */
-  execute(inputs: Tensor|Tensor[]|NamedTensorMap, outputs?: string|string[]):
-      Tensor|Tensor[] {
+  execute(inputs: Tensor | Tensor[] | NamedTensorMap, outputs?: string | string[]):
+    Tensor | Tensor[] {
     if (this.resourceIdToCapturedInput == null) {
       this.setResourceIdToCapturedInput(this.executeInitializerGraph());
     }
@@ -508,11 +510,11 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
    * @doc {heading: 'Models', subheading: 'Classes'}
    */
   async executeAsync(
-      inputs: Tensor|Tensor[]|NamedTensorMap,
-      outputs?: string|string[]): Promise<Tensor|Tensor[]> {
+    inputs: Tensor | Tensor[] | NamedTensorMap,
+    outputs?: string | string[]): Promise<Tensor | Tensor[]> {
     if (this.resourceIdToCapturedInput == null) {
       this.setResourceIdToCapturedInput(
-          await this.executeInitializerGraphAsync());
+        await this.executeInitializerGraphAsync());
     }
     inputs = this.normalizeInputs(inputs);
     outputs = this.normalizeOutputs(outputs);
@@ -598,12 +600,12 @@ export class GraphModel<ModelURL extends Url = string | io.IOHandler> implements
  * @doc {heading: 'Models', subheading: 'Loading'}
  */
 export async function loadGraphModel(
-    modelUrl: string|io.IOHandler, options: io.LoadOptions = {},
-    tfio = io): Promise<GraphModel> {
+  modelUrl: string | io.IOHandler, options: io.LoadOptions = {},
+  tfio = io): Promise<GraphModel> {
   if (modelUrl == null) {
     throw new Error(
-        'modelUrl in loadGraphModel() cannot be null. Please provide a url ' +
-        'or an IOHandler that loads the model');
+      'modelUrl in loadGraphModel() cannot be null. Please provide a url ' +
+      'or an IOHandler that loads the model');
   }
   if (options == null) {
     options = {};
@@ -628,13 +630,13 @@ export async function loadGraphModel(
  * @doc {heading: 'Models', subheading: 'Loading'}
  */
 export function loadGraphModelSync(
-    modelSource: io.IOHandlerSync|
-    io.ModelArtifacts|[io.ModelJSON, /* Weights */ ArrayBuffer]):
-    GraphModel<io.IOHandlerSync> {
+  modelSource: io.IOHandlerSync |
+    io.ModelArtifacts | [io.ModelJSON, /* Weights */ ArrayBuffer]):
+  GraphModel<io.IOHandlerSync> {
   if (modelSource == null) {
     throw new Error(
-        'modelUrl in loadGraphModelSync() cannot be null. Please provide ' +
-        'model artifacts or an IOHandler that loads the model');
+      'modelUrl in loadGraphModelSync() cannot be null. Please provide ' +
+      'model artifacts or an IOHandler that loads the model');
   }
 
   let ioHandler: io.IOHandlerSync;
@@ -645,8 +647,8 @@ export function loadGraphModelSync(
     }
     if (!weights || !(weights instanceof ArrayBuffer)) {
       throw new Error(
-          'An ArrayBuffer of weights must be the second element of' +
-          ' the array');
+        'An ArrayBuffer of weights must be the second element of' +
+        ' the array');
     }
     if (!('modelTopology' in modelJSON)) {
       throw new Error('Model JSON is missing \'modelTopology\'');
@@ -657,14 +659,14 @@ export function loadGraphModelSync(
 
     const weightSpecs = io.getWeightSpecs(modelJSON.weightsManifest);
     const modelArtifacts =
-        io.getModelArtifactsForJSONSync(modelJSON, weightSpecs, weights);
+      io.getModelArtifactsForJSONSync(modelJSON, weightSpecs, weights);
     ioHandler = io.fromMemorySync(modelArtifacts);
   } else if ('load' in modelSource) {
     // Then modelSource is already an IOHandlerSync.
     ioHandler = modelSource;
   } else if (
-      'modelTopology' in modelSource && 'weightSpecs' in modelSource &&
-      'weightData' in modelSource) {
+    'modelTopology' in modelSource && 'weightSpecs' in modelSource &&
+    'weightData' in modelSource) {
     // modelSource is of type ModelArtifacts.
     ioHandler = io.fromMemorySync(modelSource);
   } else {

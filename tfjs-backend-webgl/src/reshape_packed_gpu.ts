@@ -15,9 +15,11 @@
  * =============================================================================
  */
 
-import {GPGPUProgram, useShapeUniforms} from './gpgpu_math';
+import { GPGPUProgram, useShapeUniforms } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
 import * as shader_util from './shader_compiler_util';
 
+@memoizedClass
 export class ReshapePackedProgram implements GPGPUProgram {
   variableNames = ['A'];
   packedInputs = true;
@@ -25,7 +27,7 @@ export class ReshapePackedProgram implements GPGPUProgram {
   outputShape: number[];
   userCode: string;
   enableShapeUniforms: boolean;
-  customUniforms = [{name: 'inputShape', type: 'ivec3' as const }];
+  customUniforms = [{ name: 'inputShape', type: 'ivec3' as const }];
 
   constructor(outputShape: [number, number, number], inputShape: [
     number, number, number
@@ -59,9 +61,8 @@ export class ReshapePackedProgram implements GPGPUProgram {
 
     this.userCode = `
       ${getReshapedInputCoords(inputShape, this.enableShapeUniforms)}
-      ${
-        this.enableShapeUniforms ? shader_util.getFlatIndexFrom3DOutput() :
-                                   shader_util.getFlatIndexFrom3D(outputShape)}
+      ${this.enableShapeUniforms ? shader_util.getFlatIndexFrom3DOutput() :
+        shader_util.getFlatIndexFrom3D(outputShape)}
 
       void main() {
         ivec3 rc = getOutputCoords();
@@ -81,11 +82,11 @@ export class ReshapePackedProgram implements GPGPUProgram {
 }
 
 function getReshapedInputCoords(
-    shape: [number, number, number], enableShapeUniforms: boolean): string {
+  shape: [number, number, number], enableShapeUniforms: boolean): string {
   const coordsFromIndexSnippet = enableShapeUniforms ?
-      shader_util.getLogicalCoordinatesFromFlatIndexByUniform(
-          ['r', 'c', 'd'], 'inputShape') :
-      shader_util.getLogicalCoordinatesFromFlatIndex(['r', 'c', 'd'], shape);
+    shader_util.getLogicalCoordinatesFromFlatIndexByUniform(
+      ['r', 'c', 'd'], 'inputShape') :
+    shader_util.getLogicalCoordinatesFromFlatIndex(['r', 'c', 'd'], shape);
 
   return `
     ivec3 inputCoordsFromReshapedOutCoords(int index) {

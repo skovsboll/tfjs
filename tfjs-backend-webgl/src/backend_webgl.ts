@@ -735,7 +735,7 @@ export class MathBackendWebGL extends KernelBackend {
    */
   shouldExecuteOnCPU(
     inputs: TensorInfo[],
-    sizeThreshold = CPU_HANDOFF_SIZE_THRESHOLD): boolean {
+    sizeThreshold = CPU_HANDOFF_SIZE_THRESHOLD): boolean {    
     return env().getBool('WEBGL_CPU_FORWARD') &&
       inputs.every(
         input => this.texData.get(input.dataId).texture == null &&
@@ -875,12 +875,20 @@ export class MathBackendWebGL extends KernelBackend {
     program: GPGPUProgram, inputs: TensorInfo[], outputDtype: DataType,
     customUniformValues?: number[][], preventEagerUnpackingOfOutput = false,
     customTexShape?: [number, number]): TensorInfo {
+    
+    // performance.mark("runWebGLProgram - start")
+
     const output = this.makeTensorInfo(program.outputShape, outputDtype);
+    
+    // performance.mark("runWebGLProgram - texData.get")
     const outData = this.texData.get(output.dataId);
+    
     if (program.packedOutput) {
       outData.isPacked = true;
     }
     if (program.outPackingScheme === tex_util.PackingScheme.DENSE) {
+    
+      // performance.mark("runWebGLProgram - getDenseTexShape")
       const texelShape = customTexShape != null ?
         customTexShape :
         tex_util.getDenseTexShape(program.outputShape);
@@ -897,12 +905,16 @@ export class MathBackendWebGL extends KernelBackend {
     if (util.sizeFromShape(output.shape) === 0) {
       // Short-circuit the computation since the result is empty (has 0 in its
       // shape).
+
+      // performance.mark("runWebGLProgram - getTypedArrayFromDType")
       outData.values =
         util.getTypedArrayFromDType(output.dtype as 'float32', 0);
       return output;
     }
 
     const dataToDispose: TensorInfo[] = [];
+
+    // performance.mark("runWebGLProgram - inputsData")
     const inputsData: TensorData[] = inputs.map(input => {
       if (input.dtype === 'complex64') {
         throw new Error(
@@ -938,7 +950,9 @@ export class MathBackendWebGL extends KernelBackend {
         }
       }
 
+      // performance.mark("runWebGLProgram - uploadToGPU inputsData")
       this.uploadToGPU(input.dataId);
+
       if (!!texData.isPacked !== !!program.packedInputs) {
         input = texData.isPacked ? this.unpackTensor(input) :
           this.packTensor(input);
@@ -968,12 +982,18 @@ export class MathBackendWebGL extends KernelBackend {
       return { shape: input.shape, texData, isUniform: false };
     });
 
+
+    // performance.mark("runWebGLProgram - uploadToGPU")
     this.uploadToGPU(output.dataId);
     const outputData:
       TensorData = { shape: output.shape, texData: outData, isUniform: false };
+    
+    // performance.mark("runWebGLProgram - makeShaderKey")
     const key = gpgpu_math.makeShaderKey(program, inputsData, outputData);
-    console.log("me was here!")
+
+    // performance.mark("runWebGLProgram - getAndSaveBinary")
     const binary = this.getAndSaveBinary(key, () => {
+      // performance.mark("runWebGLProgram - compileProgram")
       return gpgpu_math.compileProgram(
         this.gpgpu, program, inputsData, outputData);
     });
@@ -984,8 +1004,11 @@ export class MathBackendWebGL extends KernelBackend {
     }
 
     if (!env().get('ENGINE_COMPILE_ONLY')) {
+      // performance.mark("runWebGLProgram - runProgram - start")
       gpgpu_math.runProgram(
         this.gpgpu, binary, inputsData, outputData, customUniformValues);
+      // performance.mark("runWebGLProgram - runProgram - end")
+      // performance.measure("runWebGLProgram - runProgram", "runWebGLProgram - runProgram - start", "runWebGLProgram - runProgram - end")
     }
 
     dataToDispose.forEach(info => this.disposeIntermediateTensorInfo(info));
@@ -1001,6 +1024,7 @@ export class MathBackendWebGL extends KernelBackend {
     if (glFlushThreshold > 0) {
       const time = util.now();
       if ((time - this.lastGlFlushTime) > glFlushThreshold) {
+        // performance.mark("runWebGLProgram - gl.flush")
         this.gpgpu.gl.flush();
         this.lastGlFlushTime = time;
       }
@@ -1008,10 +1032,14 @@ export class MathBackendWebGL extends KernelBackend {
 
     if (!env().getBool('WEBGL_LAZILY_UNPACK') && outData.isPacked &&
       preventEagerUnpackingOfOutput === false) {
+      // performance.mark("runWebGLProgram - unpackTensor")
       const unpacked = this.unpackTensor(output);
       this.disposeIntermediateTensorInfo(output);
       return unpacked;
     }
+
+    // performance.mark("runWebGLProgram - end")
+    // performance.measure("runWebGLProgram", "runWebGLProgram - start", "runWebGLProgram - end")
     return output;
   }
 
@@ -1028,10 +1056,16 @@ export class MathBackendWebGL extends KernelBackend {
 
   private getAndSaveBinary(key: string, getBinary: () => GPGPUBinary):
     GPGPUBinary {
-    if (!(key in this.binaryCache)) {
-      this.binaryCache[key] = getBinary();
+    // performance.mark("getAndSaveBinary - start")
+
+    let binary = this.binaryCache[key]
+    if (!binary) {
+      binary = getBinary()
+      this.binaryCache[key] = binary
     }
-    return this.binaryCache[key];
+    // performance.mark("getAndSaveBinary - end")
+    // performance.measure("getAndSaveBinary", "getAndSaveBinary - start", "getAndSaveBinary - end")
+    return binary;
   }
 
   getTextureManager(): TextureManager {
@@ -1117,6 +1151,7 @@ export class MathBackendWebGL extends KernelBackend {
     }
 
     if (values != null) {
+      // performance.mark("uploadToGPU - transfer - start")
       const shapeAs3D = webgl_util.getShapeAs3D(shape);
 
       let program;
@@ -1184,6 +1219,8 @@ export class MathBackendWebGL extends KernelBackend {
       if (shouldTimeProgram) {
         this.uploadWaitMs += util.now() - start;
       }
+      // performance.mark("uploadToGPU - transfer - end")
+      // performance.measure("uploadToGPU - transfer", "uploadToGPU - transfer - start", "uploadToGPU - transfer - end")
     } else {
       const newTexture = this.acquireTexture(texShape, usage, dtype, isPacked);
       texData.texture = newTexture;

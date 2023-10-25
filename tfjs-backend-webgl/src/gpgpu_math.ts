@@ -24,9 +24,11 @@ import { PackingScheme, TextureData, TextureUsage } from './tex_util';
 import { createFragmentShader } from './webgl_util';
 
 export interface GPGPUProgram {
+  cacheKey?: string;
   variableNames: string[];
   outputShape: number[];
   userCode: string;
+  // cacheKey: number;
   enableShapeUniforms?: boolean;
   /** If true, this program expects packed input textures. Defaults to false. */
   packedInputs?: boolean;
@@ -404,6 +406,7 @@ export function runProgram<T extends Tensor, K extends Tensor>(
 
 export function makeShaderKey(
   program: GPGPUProgram, inputs: TensorData[], output: TensorData): string {
+
   let keyInputs = '';
   inputs.concat(output).forEach(x => {
     const hasOffset = x.texData != null && x.texData.slice != null &&
@@ -462,10 +465,10 @@ export function makeShaderKey(
       keyInputs += `${x.shape}_${texShape}_${hasOffset}`;
     }
   });
-  // const keyUserCode = program.userCode;
+  const keyUserCode = program.cacheKey || program.userCode;
   let key = program.constructor.name;
   // Fast string concat. See https://jsperf.com/string-concatenation/14.
-  key += '_' + keyInputs + '_' + 
+  key += '_' + keyInputs + '_' + keyUserCode +
     `${env().getNumber('WEBGL_VERSION')}`;
   return key;
 }

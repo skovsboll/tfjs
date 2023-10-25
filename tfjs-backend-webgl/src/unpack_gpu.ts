@@ -15,10 +15,12 @@
  * =============================================================================
  */
 
-import {GPGPUProgram, useShapeUniforms} from './gpgpu_math';
-import {getChannels, getSourceCoords} from './packing_util';
-import {getCoordsDataType} from './shader_compiler';
+import { GPGPUProgram, useShapeUniforms } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
+import { getChannels, getSourceCoords } from './packing_util';
+import { getCoordsDataType } from './shader_compiler';
 
+@memoizedClass
 export class UnpackProgram implements GPGPUProgram {
   variableNames = ['A'];
   packedInputs = true;

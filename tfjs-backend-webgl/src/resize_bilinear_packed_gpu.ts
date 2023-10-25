@@ -15,8 +15,10 @@
  * =============================================================================
  */
 
-import {GPGPUProgram} from './gpgpu_math';
+import { GPGPUProgram } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
 
+@memoizedClass
 export class ResizeBilinearPackedProgram implements GPGPUProgram {
   variableNames = ['A'];
   packedInputs = true;
@@ -25,8 +27,8 @@ export class ResizeBilinearPackedProgram implements GPGPUProgram {
   userCode: string;
 
   constructor(
-      inputShape: [number, number, number, number], newHeight: number,
-      newWidth: number, alignCorners: boolean, halfPixelCenters: boolean) {
+    inputShape: [number, number, number, number], newHeight: number,
+    newWidth: number, alignCorners: boolean, halfPixelCenters: boolean) {
     const [batch, oldHeight, oldWidth, depth] = inputShape;
     this.outputShape = [batch, newHeight, newWidth, depth];
 
@@ -43,7 +45,7 @@ export class ResizeBilinearPackedProgram implements GPGPUProgram {
     let sourceFracIndexRC: string;
     if (halfPixelCenters) {
       sourceFracIndexRC = `(vec3(yRC) + vec3(0.5)) * ` +
-          `effectiveInputOverOutputRatioRC - vec3(0.5)`;
+        `effectiveInputOverOutputRatioRC - vec3(0.5)`;
     } else {
       sourceFracIndexRC = `vec3(yRC) * effectiveInputOverOutputRatioRC`;
     }

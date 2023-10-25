@@ -15,9 +15,11 @@
  * =============================================================================
  */
 
-import {getGlslDifferences} from '../../glsl_version';
-import {GPGPUProgram} from '../../gpgpu_math';
+import { getGlslDifferences } from '../../glsl_version';
+import { GPGPUProgram } from '../../gpgpu_math';
+import { memoizedClass } from '../memoize';
 
+@memoizedClass
 export class FromPixelsPackedProgram implements GPGPUProgram {
   variableNames = ['A'];
   userCode: string;
@@ -27,7 +29,7 @@ export class FromPixelsPackedProgram implements GPGPUProgram {
 
   constructor(outputShape: number[]) {
     const glsl = getGlslDifferences();
-    const [height, width, ] = outputShape;
+    const [height, width,] = outputShape;
     this.outputShape = outputShape;
     this.userCode = `
       void main() {

@@ -15,10 +15,12 @@
  * =============================================================================
  */
 
-import {GPGPUProgram} from './gpgpu_math';
-import {getChannels} from './packing_util';
-import {getCoordsDataType, UniformType} from './shader_compiler';
+import { GPGPUProgram } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
+import { getChannels } from './packing_util';
+import { getCoordsDataType, UniformType } from './shader_compiler';
 
+@memoizedClass
 export class SlicePackedProgram implements GPGPUProgram {
   variableNames = ['source'];
   packedInputs = true;
@@ -26,20 +28,20 @@ export class SlicePackedProgram implements GPGPUProgram {
   outputShape: number[];
   userCode: string;
   rank: number;
-  customUniforms: Array<{name: string; arrayIndex: number; type: UniformType;}>;
+  customUniforms: Array<{ name: string; arrayIndex: number; type: UniformType; }>;
 
   constructor(destSize: number[]) {
     this.outputShape = destSize;
     this.rank = destSize.length;
-    this.customUniforms = [{name: 'start', arrayIndex: this.rank, type: 'int'}];
+    this.customUniforms = [{ name: 'start', arrayIndex: this.rank, type: 'int' }];
     const dtype = getCoordsDataType(this.rank);
     const coords = getChannels('coords', this.rank);
     const sourceLoc = getChannels('sourceLoc', this.rank);
 
     const innerDims =
-        this.rank === 1 ? 'sourceLoc' : `vec2(${sourceLoc.slice(-2).join()})`;
+      this.rank === 1 ? 'sourceLoc' : `vec2(${sourceLoc.slice(-2).join()})`;
     const getChannel =
-        `getChannel(getSource(${sourceLoc.join()}), ${innerDims})`;
+      `getChannel(getSource(${sourceLoc.join()}), ${innerDims})`;
     const upperRow = `
       result.x = ${getChannel};
       if (++${coords[this.rank - 1]} < ${destSize[this.rank - 1]}) {
@@ -61,10 +63,10 @@ export class SlicePackedProgram implements GPGPUProgram {
     `;
 
     const sourceLocSetup = this.rank <= 4 ?
-        `sourceLoc = coords +
+      `sourceLoc = coords +
             ${dtype}(${destSize.map((_, i) => `start[${i}]`).join()});` :
-        destSize.map((_, i) => `${sourceLoc[i]} = ${coords[i]} + start[${i}];`)
-            .join('\n');
+      destSize.map((_, i) => `${sourceLoc[i]} = ${coords[i]} + start[${i}];`)
+        .join('\n');
     this.userCode = `
       void main() {
         ${dtype} coords = getOutputCoords();

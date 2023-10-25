@@ -15,11 +15,12 @@
  * =============================================================================
  */
 
-import {backend_util, util} from '@tensorflow/tfjs-core';
+import { backend_util, util } from '@tensorflow/tfjs-core';
 
-import {GPGPUProgram, useShapeUniforms} from './gpgpu_math';
-import {getChannels} from './packing_util';
-import {getCoordsDataType} from './shader_compiler';
+import { GPGPUProgram, useShapeUniforms } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
+import { getChannels } from './packing_util';
+import { getCoordsDataType } from './shader_compiler';
 
 export const CHECK_NAN_SNIPPET_PACKED = `
   result.r = isNaN.r ? NAN : result.r;
@@ -37,6 +38,7 @@ export const NOT_EQUAL = `
   return vec4(notEqual(a, b));
 `;
 
+@memoizedClass
 export class BinaryOpPackedProgram implements GPGPUProgram {
   variableNames = ['A', 'B'];
   outputShape: number[];
@@ -47,8 +49,8 @@ export class BinaryOpPackedProgram implements GPGPUProgram {
   enableShapeUniforms: boolean;
 
   constructor(
-      op: string, aShape: number[], bShape: number[],
-      checkOutOfBounds = false) {
+    op: string, aShape: number[], bShape: number[],
+    checkOutOfBounds = false) {
     this.outputShape = backend_util.assertAndGetBroadcastShape(aShape, bShape);
     const rank = this.outputShape.length;
     this.enableShapeUniforms = useShapeUniforms(rank);

@@ -15,7 +15,8 @@
  * =============================================================================
  */
 
-import {GPGPUProgram, useShapeUniforms} from './gpgpu_math';
+import { GPGPUProgram, useShapeUniforms } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
 
 export const LINEAR = `return x;`;
 
@@ -56,6 +57,7 @@ export const RELU6 = `
 
 export const SIGMOID = `return 1.0 / (1.0 + exp(-1.0 * x));`;
 
+@memoizedClass
 export class UnaryOpPackedProgram implements GPGPUProgram {
   variableNames = ['A'];
   userCode: string;

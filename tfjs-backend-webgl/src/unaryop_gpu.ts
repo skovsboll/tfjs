@@ -15,8 +15,10 @@
  * =============================================================================
  */
 
-import {GPGPUProgram, useShapeUniforms} from './gpgpu_math';
+import { GPGPUProgram, useShapeUniforms } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
 
+@memoizedClass
 export class UnaryOpProgram implements GPGPUProgram {
   variableNames = ['A'];
   userCode: string;

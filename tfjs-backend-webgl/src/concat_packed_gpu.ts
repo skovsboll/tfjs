@@ -15,12 +15,14 @@
  * =============================================================================
  */
 
-import {backend_util} from '@tensorflow/tfjs-core';
+import { backend_util } from '@tensorflow/tfjs-core';
 
-import {GPGPUProgram} from './gpgpu_math';
-import {getChannels} from './packing_util';
-import {getCoordsDataType} from './shader_compiler';
+import { GPGPUProgram } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
+import { getChannels } from './packing_util';
+import { getCoordsDataType } from './shader_compiler';
 
+@memoizedClass
 export class ConcatPackedProgram implements GPGPUProgram {
   variableNames: string[];
   packedInputs = true;

@@ -15,10 +15,12 @@
  * =============================================================================
  */
 
-import {backend_util} from '@tensorflow/tfjs-core';
-import {getGlslDifferences} from './glsl_version';
-import {GPGPUProgram, useShapeUniforms} from './gpgpu_math';
+import { backend_util } from '@tensorflow/tfjs-core';
+import { getGlslDifferences } from './glsl_version';
+import { GPGPUProgram, useShapeUniforms } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
 
+@memoizedClass
 export class Im2ColPackedProgram implements GPGPUProgram {
   variableNames = ['A'];
   packedInputs = true;
@@ -27,27 +29,27 @@ export class Im2ColPackedProgram implements GPGPUProgram {
   userCode: string;
   enableShapeUniforms: boolean;
   customUniforms = [
-    {name: 'inputShape', type: 'ivec4' as const },
-    {name: 'pad', type: 'ivec2' as const },
-    {name: 'stride', type: 'ivec2' as const },
-    {name: 'dilation', type: 'ivec2' as const },
-    {name: 'inChannels', type: 'int' as const },
-    {name: 'itemsPerBlockRow', type: 'int' as const },
-    {name: 'outWidth', type: 'int' as const },
+    { name: 'inputShape', type: 'ivec4' as const },
+    { name: 'pad', type: 'ivec2' as const },
+    { name: 'stride', type: 'ivec2' as const },
+    { name: 'dilation', type: 'ivec2' as const },
+    { name: 'inChannels', type: 'int' as const },
+    { name: 'itemsPerBlockRow', type: 'int' as const },
+    { name: 'outWidth', type: 'int' as const },
   ];
 
   constructor(outputShape: number[], convInfo: backend_util.Conv2DInfo) {
     this.outputShape = outputShape;
     this.enableShapeUniforms = useShapeUniforms(this.outputShape.length);
-    const {dataFormat} = convInfo;
+    const { dataFormat } = convInfo;
     const glsl = getGlslDifferences();
     const isChannelsLast = dataFormat === 'channelsLast';
     const rowDim = isChannelsLast ? 1 : 2;
     const colDim = isChannelsLast ? 2 : 3;
 
     const boundsCheckingSnippet = this.enableShapeUniforms ?
-        'if(blockIndex < outShape[2] && pos < outShape[1]) {' :
-        `if(blockIndex < ${outputShape[2]} && pos < ${outputShape[1]}) {`;
+      'if(blockIndex < outShape[2] && pos < outShape[1]) {' :
+      `if(blockIndex < ${outputShape[2]} && pos < ${outputShape[1]}) {`;
     let unrolled = ``;
 
     for (let row = 0; row <= 1; row++) {

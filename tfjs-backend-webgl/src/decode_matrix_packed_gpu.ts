@@ -15,11 +15,13 @@
  * =============================================================================
  */
 
-import {getGlslDifferences} from './glsl_version';
-import {GPGPUProgram, useShapeUniforms} from './gpgpu_math';
+import { getGlslDifferences } from './glsl_version';
+import { GPGPUProgram, useShapeUniforms } from './gpgpu_math';
+import { memoizedClass } from './kernels/memoize';
 import * as shader_util from './shader_compiler_util';
-import {PackingScheme} from './tex_util';
+import { PackingScheme } from './tex_util';
 
+@memoizedClass
 export class DecodeMatrixPackedProgram implements GPGPUProgram {
   variableNames = ['A'];
   userCode: string;
@@ -28,7 +30,7 @@ export class DecodeMatrixPackedProgram implements GPGPUProgram {
   outputShape: [number, number, number];
   outPackingScheme = PackingScheme.DENSE;
   enableShapeUniforms: boolean;
-  customUniforms = [{name: 'texShape', type: 'ivec2' as const }];
+  customUniforms = [{ name: 'texShape', type: 'ivec2' as const }];
 
   constructor(outputShape: [number, number, number]) {
     const glsl = getGlslDifferences();
@@ -37,12 +39,11 @@ export class DecodeMatrixPackedProgram implements GPGPUProgram {
 
     this.userCode = `
       ivec3 outCoordsFromFlatIndex(int index) {
-        ${
-        this.enableShapeUniforms ?
-            shader_util.getOutputLogicalCoordinatesFromFlatIndexByUniform(
-                ['r', 'c', 'd'], outputShape) :
-            shader_util.getLogicalCoordinatesFromFlatIndex(
-                ['r', 'c', 'd'], outputShape)}
+        ${this.enableShapeUniforms ?
+        shader_util.getOutputLogicalCoordinatesFromFlatIndexByUniform(
+          ['r', 'c', 'd'], outputShape) :
+        shader_util.getLogicalCoordinatesFromFlatIndex(
+          ['r', 'c', 'd'], outputShape)}
         return ivec3(r, c, d);
       }
 
